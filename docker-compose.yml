@@ -1,0 +1,134 @@
+version: "3.9"
+
+services:
+  backend:
+    build: 
+      context: ./backend
+      args:
+        DJANGO_ENV: development
+    environment:
+      - DJANGO_ENV=development
+    container_name: backend
+    command: gunicorn core.wsgi:application --bind 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+      - ./backend/staticfiles:/app/staticfiles
+      - ./backend/media:/app/media
+    env_file:
+      - .env
+    depends_on:
+      - db
+      - redis
+    ports:
+      - "8000:8000"
+
+  frontend:
+    build: ./frontend
+    container_name: frontend
+    stdin_open: true
+    tty: true
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+
+  db:
+    image: postgres:15
+    container_name: postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    ports:
+      - "6379:6379"
+
+  celery:
+    build:
+      context: ./backend
+      args:
+        DJANGO_ENV: development
+    container_name: celery
+    command: celery -A core worker -l info
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+    depends_on:
+      - backend
+      - redis
+      - db
+
+  celery-beat:
+    build:
+      context: ./backend
+      args:
+        DJANGO_ENV: development
+    container_name: celery-beat
+    command: celery -A core beat -l info
+    volumes:
+      - ./backend:/app
+    env_file:
+      - .env
+    depends_on:
+      - backend
+      - redis
+      - db
+
+volumes:
+  postgres_data:
+
+# services:
+#   backend:
+#     build: 
+#       context: ./backend
+#       args:
+#         DJANGO_ENV: development
+#     environment:
+#       - DJANGO_ENV=development
+#     container_name: backend
+#     command: gunicorn core.wsgi:application --bind 0.0.0.0:8000
+#     volumes:
+#       - ./backend:/app
+#       - ./backend/staticfiles:/app/staticfiles
+#       - ./backend/media:/app/media
+#     env_file:
+#       - .env
+#     depends_on:
+#       - db
+#     ports:
+#       - "8000:8000"
+
+#   frontend:
+#     build: ./frontend
+#     container_name: frontend
+#     stdin_open: true
+#     tty: true
+#     ports:
+#       - "3000:80"
+#     depends_on:
+#       - backend
+
+#   db:
+#     image: postgres:15
+#     container_name: postgres
+#     environment:
+#       POSTGRES_DB: ${POSTGRES_DB}
+#       POSTGRES_USER: ${POSTGRES_USER}
+#       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+#     volumes:
+#       - postgres_data:/var/lib/postgresql/data
+#     ports:
+#       - "5432:5432"
+
+# volumes:
+#   postgres_data:
+
+# version: "3.9"

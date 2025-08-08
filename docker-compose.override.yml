@@ -1,0 +1,26 @@
+version: "3.9"
+
+services:
+  backend:
+    command: python manage.py runserver 0.0.0.0:8000
+    volumes:
+      - ./backend:/app
+      - ./backend/staticfiles:/app/staticfiles
+      - ./backend/media:/app/media
+      - ./backend:/app:z  # ensures file permissions work on Windows
+    environment:
+      - DJANGO_ENV=development
+
+  celery:
+    command: celery -A core worker -l info --pool=solo --without-gossip --without-mingle --without-heartbeat
+    volumes:
+      - ./backend:/app
+    environment:
+      - DJANGO_ENV=development
+
+  celery-beat:
+    command: celery -A core beat -l info
+    volumes:
+      - ./backend:/app
+    environment:
+      - DJANGO_ENV=development
