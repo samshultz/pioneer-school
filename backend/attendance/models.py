@@ -32,8 +32,21 @@ class AttendanceSession(models.Model):
         ("AFTERNOON", "Afternoon"),
     ]
 
-    organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="attendance_sessions")
-    class_ref = models.ForeignKey(Class, on_delete=models.CASCADE, related_name="attendance_sessions")
+    organization = models.ForeignKey(
+        Organization, 
+        on_delete=models.CASCADE, 
+        related_name="attendance_sessions"
+    )
+    class_assignment = models.ForeignKey(
+        "academics.ClassSessionAssignment", 
+        on_delete=models.CASCADE, 
+        related_name="attendance_sessions"
+    )
+    # class_ref = models.ForeignKey(
+    #     Class, 
+    #     on_delete=models.CASCADE, 
+    #     related_name="attendance_sessions"
+    # )
     date = models.DateField()
     period = models.CharField(max_length=10, choices=PERIOD_CHOICES)
     term = models.ForeignKey(
@@ -41,7 +54,7 @@ class AttendanceSession(models.Model):
         on_delete=models.CASCADE, 
         related_name="attendance_sessions"
     )
-    form_teacher = models.ForeignKey(TeacherProfile, on_delete=models.CASCADE, related_name="marked_sessions")
+    # form_teacher = models.ForeignKey(TeacherProfile, on_delete=models.CASCADE, related_name="marked_sessions")
     is_locked = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -49,7 +62,12 @@ class AttendanceSession(models.Model):
     all_objects = models.Manager()
 
     class Meta:
-        unique_together = ("organization", "class_ref", "date", "period")
+        unique_together = (
+            "organization", 
+            "class_assignment", 
+            "date", 
+            "period"
+        )
         ordering = ["-date", "period"]
 
     def __str__(self):
@@ -89,7 +107,12 @@ class AttendanceRecord(models.Model):
 # Precomputed weekly summaries
 class WeeklyAttendanceSummary(models.Model):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="weekly_attendance_summaries")
-    class_ref = models.ForeignKey(Class, on_delete=models.CASCADE, related_name="weekly_summaries")
+    class_assignment = models.ForeignKey(
+        "academics.ClassSessionAssignment", 
+        on_delete=models.CASCADE, 
+        related_name="weekly_attendance_summary"
+    )
+    # class_ref = models.ForeignKey(Class, on_delete=models.CASCADE, related_name="weekly_summaries")
     student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE, related_name="weekly_summaries")
     week_start = models.DateField()
     week_end = models.DateField()
@@ -106,13 +129,18 @@ class WeeklyAttendanceSummary(models.Model):
     all_objects = models.Manager()
 
     class Meta:
-        unique_together = ("organization", "class_ref", "student", "week_start", "week_end")
+        unique_together = ("organization", "class_assignment", "student", "week_start", "week_end")
 
 
 # Precomputed term summaries
 class TermAttendanceSummary(models.Model):
     organization = models.ForeignKey(Organization, on_delete=models.CASCADE, related_name="term_attendance_summaries")
-    class_ref = models.ForeignKey(Class, on_delete=models.CASCADE, related_name="term_summaries")
+    class_assignment = models.ForeignKey(
+        "academics.ClassSessionAssignment", 
+        on_delete=models.CASCADE, 
+        related_name="term_attendance_summary"
+    )
+    # class_ref = models.ForeignKey(Class, on_delete=models.CASCADE, related_name="term_summaries")
     student = models.ForeignKey(StudentProfile, on_delete=models.CASCADE, related_name="term_summaries")
     term = models.ForeignKey("academics.Term", on_delete=models.CASCADE, related_name="attendance_summaries")
     total_sessions = models.PositiveIntegerField(default=0)
@@ -125,7 +153,7 @@ class TermAttendanceSummary(models.Model):
     class Meta:
         unique_together = (
             "organization", 
-            "class_ref", 
+            "class_assignment", 
             "student", 
             
         "term")
@@ -133,7 +161,12 @@ class TermAttendanceSummary(models.Model):
 class WeeklyClassAttendanceSummary(models.Model):
     """Precomputed totals for a whole class in a given week."""
     organization = models.ForeignKey("users.Organization", on_delete=models.CASCADE)
-    class_ref = models.ForeignKey("academics.Class", on_delete=models.CASCADE)
+    class_assignment = models.ForeignKey(
+        "academics.ClassSessionAssignment", 
+        on_delete=models.CASCADE, 
+        related_name="weekly_class_attendance_summary"
+    )
+    # class_ref = models.ForeignKey("academics.Class", on_delete=models.CASCADE)
     week_start = models.DateField()
     week_end = models.DateField()
     term = models.ForeignKey(
@@ -149,7 +182,7 @@ class WeeklyClassAttendanceSummary(models.Model):
     all_objects = models.Manager()
 
     class Meta:
-        unique_together = ("organization", "class_ref", "week_start", "week_end")
+        unique_together = ("organization", "class_assignment", "week_start", "week_end")
 
     def __str__(self):
         return f"{self.class_ref.name} [{self.week_start} - {self.week_end}]"
@@ -160,9 +193,14 @@ class TermClassAttendanceSummary(models.Model):
     organization = models.ForeignKey(
         Organization, on_delete=models.CASCADE, related_name="term_class_attendance_summaries"
     )
-    class_ref = models.ForeignKey(
-        Class, on_delete=models.CASCADE, related_name="term_class_summaries"
+    class_assignment = models.ForeignKey(
+        "academics.ClassSessionAssignment", 
+        on_delete=models.CASCADE, 
+        related_name="term_class_attendance_summary"
     )
+    # class_ref = models.ForeignKey(
+    #     Class, on_delete=models.CASCADE, related_name="term_class_summaries"
+    # )
     term = models.ForeignKey("academics.Term", on_delete=models.CASCADE, related_name="term_class_attendance_summaries")
     total_sessions = models.PositiveIntegerField(default=0)  # total possible sessions for all students
     attended_sessions = models.PositiveIntegerField(default=0)  # total attended sessions for all students
@@ -174,7 +212,7 @@ class TermClassAttendanceSummary(models.Model):
     all_objects = models.Manager()    # unfiltered
 
     class Meta:
-        unique_together = ("organization", "class_ref", "term")
+        unique_together = ("organization", "class_assignment", "term")
 
     def __str__(self):
         return f"{self.class_ref.name} - {self.term}"

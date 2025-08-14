@@ -90,7 +90,10 @@ class AttendanceSessionViewSet(viewsets.ModelViewSet):
         session.save(update_fields=["is_locked"])
         return Response({"detail": f"Session {session.id} unlocked."}, status=status.HTTP_200_OK)
     
-    @action(detail=True, methods=["get", "post", "patch"], url_path="records")
+    @action(
+            detail=True, 
+            methods=["get", "post", "patch"], 
+            url_path="records")
     def records(self, request, pk=None):
         """
         GET: List all attendance records for this session.
@@ -98,6 +101,14 @@ class AttendanceSessionViewSet(viewsets.ModelViewSet):
         PATCH: Bulk update existing records (partial).
         """
         session = self.get_object()
+
+        # # Restrict POST/PATCH to those who can actually manage this session
+        # if request.method in ["POST", "PATCH"]:
+        #     if not hasattr(request.user, "teacher_profile") or session.form_teacher != request.user.teacher_profile:
+        #         return Response(
+        #             {"detail": "You do not have permission to modify this session."},
+        #             status=status.HTTP_403_FORBIDDEN
+        #         )
 
         # --- LIST ---
         if session.is_locked:

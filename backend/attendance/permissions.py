@@ -11,9 +11,7 @@ class CanViewAttendance(permissions.BasePermission):
 
     def has_object_permission(self, request, view, obj):
         # Read-only allowed for everyone authenticated
-        if request.method in permissions.SAFE_METHODS:
-            return True
-        return False
+        return request.method in permissions.SAFE_METHODS
     
 class CanManageAttendance(permissions.BasePermission):
     """
@@ -25,7 +23,7 @@ class CanManageAttendance(permissions.BasePermission):
         if not request.user.is_authenticated:
             return False
 
-        role = request.user.memberships.first().role
+        role = getattr(request.user.memberships.first(), "role", None)
 
         # Safe methods: all roles can view
         if request.method in permissions.SAFE_METHODS:
@@ -33,21 +31,30 @@ class CanManageAttendance(permissions.BasePermission):
 
         # Write permissions: only teachers who are form teachers of the class
         if role == Membership.RoleChoices.TEACHER:
-            return True  # we'll refine to check form_teacher in `has_object_permission`
-
+            # For viewsets where pk is passed in the URL
+            if "pk" in view.kwargs:
+                from attendance.models import AttendanceSession
+                try:
+                    session = AttendanceSession.objects.get(pk=view.kwargs["pk"])
+                except AttendanceSession.DoesNotExist:
+                    return False
+                return session.form_teacher == request.user.memberships().teacher_profile
+            return True  # fallback for other cases
         return False
 
     def has_object_permission(self, request, view, obj):
         if request.method in permissions.SAFE_METHODS:
             return True
 
+        role = getattr(request.user.memberships.first(), "role", None)
+
         # Teacher must be the assigned form teacher for this class
-        if request.user.membership.role == Membership.RoleChoices.TEACHER:
+        if role == Membership.RoleChoices.TEACHER:
             # For AttendanceSession
             if hasattr(obj, "form_teacher"):
-                return obj.form_teacher == request.user.teacher_profile
+                return obj.form_teacher == request.user.memberships.first().teacher_profile
             # For AttendanceRecord
             if hasattr(obj, "session"):
-                return obj.session.form_teacher == request.user.teacher_profile
+                return obj.session.form_teacher == request.user.memberships().teacher_profile
 
         return False

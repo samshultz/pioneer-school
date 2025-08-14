@@ -20,27 +20,33 @@ def get_week_bounds(date):
 
 def compute_weekly_summary_for_student(student, class_ref, week_start, week_end, organization):
     """Compute/update weekly summary for a student."""
+
     records = AttendanceRecord.objects.filter(
         student=student,
         session__class_ref=class_ref,
         session__date__range=(week_start, week_end),
         organization=organization,
+        session__date__range=[week_start, week_end],
     )
 
     total_sessions = records.count()
-    attended_sessions = records.filter(status=AttendanceRecord.status).count()
+    attended_sessions = records.filter(status="PRESENT").count()
     percentage = (attended_sessions / total_sessions * 100) if total_sessions else 0
 
     WeeklyAttendanceSummary.objects.update_or_create(
+        organization=organization,
         class_ref=class_ref,
         student=student,
         week_start=week_start,
         week_end=week_end,
-        defaults={
-            "total_sessions": total_sessions,
-            "attended_sessions": attended_sessions,
-            "percentage": percentage,
-        }
+        total_sessions=total_sessions,
+        attended_sessions=attended_sessions,
+        percentage=percentage,
+        # defaults={
+        #     "total_sessions": total_sessions,
+        #     "attended_sessions": attended_sessions,
+        #     "percentage": percentage,
+        # }
     )
 
 
@@ -54,7 +60,7 @@ def compute_term_summary_for_student(student, class_ref, term, organization):
     )
 
     total_sessions = records.count()
-    attended_sessions = records.filter(status=AttendanceRecord.Status.PRESENT).count()
+    attended_sessions = records.filter(status="PRESENT").count()
     percentage = (attended_sessions / total_sessions * 100) if total_sessions else 0
 
     TermAttendanceSummary.objects.update_or_create(
@@ -62,11 +68,14 @@ def compute_term_summary_for_student(student, class_ref, term, organization):
         class_ref=class_ref,
         student=student,
         term=term,
-        defaults={
-            "total_sessions": total_sessions,
-            "attended_sessions": attended_sessions,
-            "percentage": percentage,
-        }
+        total_sessions=total_sessions,
+        attended_sessions=attended_sessions,
+        percentage=percentage
+        # defaults={
+        #     "total_sessions": total_sessions,
+        #     "attended_sessions": attended_sessions,
+        #     "percentage": percentage,
+        # }
     )
 
 def compute_weekly_summaries(class_ref, week_start, week_end, organization):
@@ -94,11 +103,14 @@ def compute_weekly_summaries(class_ref, week_start, week_end, organization):
             student=student,
             week_start=week_start,
             week_end=week_end,
-            defaults={
-                "total_sessions": total_sessions,
-                "attended_sessions": attended_sessions,
-                "percentage": percentage,
-            },
+            total_sessions=total_sessions,
+            attended_sessions=attended_sessions,
+            percentage=percentage
+            # defaults={
+            #     "total_sessions": total_sessions,
+            #     "attended_sessions": attended_sessions,
+            #     "percentage": percentage,
+            # },
         )
 
     # --- Class-level Summary ---
@@ -197,11 +209,14 @@ def compute_term_summary_for_student(student, class_ref, term, organization):
         class_ref=class_ref,
         student=student,
         term=term,
-        defaults={
-            "total_sessions": total_sessions,
-            "attended_sessions": attended_sessions,
-            "percentage": percentage,
-        }
+        total_sessions=total_sessions,
+        attended_sessions=attended_sessions,
+        percentage=percentage
+        # defaults={
+        #     "total_sessions": total_sessions,
+        #     "attended_sessions": attended_sessions,
+        #     "percentage": percentage,
+        # }
     )
 
 def recompute_all_summaries(attendance_record):

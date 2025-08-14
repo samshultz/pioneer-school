@@ -26,6 +26,28 @@ class Class(models.Model):
         return f"{self.name}{f' - {self.section}' if self.section else ''}"
 
 
+class ClassSessionAssignment(models.Model):
+    """
+    Assign a form teacher to a Class for an AcademicSession (the whole session: 3 terms).
+    Keeps history by being session-scoped.
+    """
+    organization = models.ForeignKey("users.Organization", on_delete=models.CASCADE, related_name="class_assignments")
+    class_ref = models.ForeignKey("Class", on_delete=models.CASCADE, related_name="session_assignments")
+    form_teacher = models.ForeignKey("users.TeacherProfile", on_delete=models.SET_NULL, null=True, related_name="class_assignments")
+    session = models.ForeignKey("AcademicSession", on_delete=models.CASCADE, related_name="class_assignments")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    objects = OrganizationManager()
+    all_objects = models.Manager()
+
+    class Meta:
+        unique_together = ("organization", "class_ref", "session")
+        ordering = ["-session__start_date", "class_ref__name"]
+
+    def __str__(self):
+        return f"{self.class_ref} - {self.session} ({self.form_teacher and self.form_teacher.membership.user.get_full_name()})"
+
+
 class Subject(models.Model):
     """
     Represents a school subject (e.g., Mathematics, English).
